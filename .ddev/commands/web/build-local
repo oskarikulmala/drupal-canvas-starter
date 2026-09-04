@@ -1,0 +1,11 @@
+#!/bin/bash
+
+## Description: Rebuild the site locally after pulling changes
+## Usage: build-local
+## Example: ddev build-local
+
+set -e
+
+composer install
+drush deploy -y
+drush uli

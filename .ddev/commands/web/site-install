@@ -1,0 +1,27 @@
+#!/bin/bash
+
+## Description: Install a fresh site with Canvas, AI agents, and OAuth wired up
+## Usage: site-install
+## Example: ddev site-install
+
+set -e
+
+composer install
+
+if [ ! -f keys/private.key ]; then
+  echo "Generating OAuth key pair in keys/ ..."
+  openssl genrsa -out keys/private.key 2048
+  openssl rsa -in keys/private.key -pubout > keys/public.key
+fi
+
+drush site-install standard -y
+drush recipe:apply recipes/canvas_starter -y
+drush cr
+
+echo ""
+echo "Site installed. Two manual steps remain before 'npx canvas push' works:"
+echo "  1. At /admin/config/people/simple_oauth, set the key paths to keys/private.key and keys/public.key"
+echo "  2. At /admin/config/services/consumer, create a consumer with the Authorization Code grant,"
+echo "     PKCE enabled, 'Is Confidential?' unchecked, and redirect URI http://localhost:4444/callback"
+echo ""
+drush uli

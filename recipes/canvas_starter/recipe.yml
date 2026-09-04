@@ -1,0 +1,14 @@
+name: 'Canvas starter'
+description: 'Installs Drupal Canvas with its AI agents, dev tooling, and OAuth so the Canvas CLI (npx canvas login / npx canvas push) works out of the box.'
+type: 'Site'
+install:
+  - canvas
+  - canvas_ai
+  - canvas_dev_ai
+  - canvas_dev_mode
+  - canvas_oauth
+  - ai
+  - ai_agents
+  - ai_provider_openai
+  - pathauto
+  - simple_oauth

@@ -1,0 +1,20 @@
+# Composer-managed Drupal codebase.
+/vendor/
+/web/core/
+/web/modules/contrib/
+/web/profiles/contrib/
+/web/themes/contrib/
+/web/libraries/
+/web/sites/*/settings.local.php
+/web/sites/*/files/
+
+# Local secrets.
+/keys/*.key
+canvas_components/.env
+canvas_components/.env.local
+
+# Canvas component tooling.
+canvas_components/node_modules/
+canvas_components/dist/
+
+.DS_Store
