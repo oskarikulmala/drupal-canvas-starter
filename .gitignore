@@ -20,3 +20,5 @@ canvas_components/dist/
 .DS_Store
 /.editorconfig
 /.gitattributes
+
+.idea
