@@ -1,6 +1,11 @@
 name: 'Canvas starter'
 description: 'Installs Drupal Canvas with its AI agents, dev tooling, and OAuth so the Canvas CLI (npx canvas login / npx canvas push) works out of the box.'
 type: 'Site'
+recipes:
+  # `canvas login`'s default scope request includes `canvas:media:image:create`,
+  # which canvas_oauth only creates once an "image" media type exists. The
+  # `standard` install profile doesn't provide one on its own.
+  - core/recipes/image_media_type
 install:
   - canvas
   - canvas_ai

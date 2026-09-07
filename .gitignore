@@ -18,3 +18,5 @@ canvas_components/node_modules/
 canvas_components/dist/
 
 .DS_Store
+/.editorconfig
+/.gitattributes
