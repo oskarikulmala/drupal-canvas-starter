@@ -1,129 +1,195 @@
-# Canvas Drupal starter
+# Drupal Canvas Starter
 
-A reusable kickstart for a Drupal 11 site built around
-[Drupal Canvas](https://project.pages.drupalcode.org/canvas/) code components,
-running locally on [DDEV](https://ddev.com), with the Canvas CLI
-(`npx canvas push`) wired up.
+**Go from an empty folder to a working Drupal Canvas site with React
+components in three commands.**
 
-## Prerequisites
+This starter sets up a Drupal 11 site built around
+[Drupal Canvas](https://project.pages.drupalcode.org/canvas/), Drupal's
+visual page builder, together with a modern component workflow. You write
+components in React and Tailwind CSS, preview them instantly in Canvas
+Workbench, and push them to Drupal, where editors build pages with them
+visually.
 
-- [DDEV](https://ddev.com/get-started/) 1.24+ with a Docker provider
-  (Docker Desktop, OrbStack, Colima or Rancher Desktop).
-- **Node.js 22+ on your own machine** (`node -v`), not just inside DDEV.
-  The Canvas CLI and Workbench run on the host. Install Node from
+- **No manual setup.** One command installs the site, the Canvas and AI
+  modules, and OAuth. One more pushes a complete example homepage.
+- **No logins or prompts.** The Canvas CLI authenticates by itself, so
+  push and pull just work, even after a reinstall.
+- **Built for teams.** Components, pages and site config live in git, and
+  teammates get a working copy with the same three commands.
+- **Front-end first.** Build components in Workbench before a Drupal site
+  even exists.
+- **AI-ready.** Drupal AI and the Canvas AI agents come preinstalled.
+
+## Quick start
+
+You need [DDEV](https://ddev.com/get-started/) and
+[Node.js 22+](https://nodejs.org).
+
+```bash
+ddev start
+ddev site-install
+ddev push-components
+```
+
+Then open the one-time login link printed by `site-install`, and go to
+`/home` to see the example page.
+
+## Commands
+
+| Command | What it does |
+|---|---|
+| `ddev site-install` | Installs a fresh site. It wipes the database. |
+| `ddev push-components` | Sends your components, pages and regions to Drupal. |
+| `ddev pull-components` | Brings edits made in the Drupal UI back into your code. |
+| `ddev build-local` | Updates your site after pulling teammates' changes. |
+| `./dev.sh` | Starts Canvas Workbench to preview components. It needs no Drupal site. |
+
+Pages arrive in Drupal as unpublished drafts. Publish them from the Canvas
+editor.
+
+## Working as a team
+
+1. Build or change components in `canvas_components/src/components/`,
+   previewing them with `./dev.sh`.
+2. Run `ddev push-components`.
+3. Commit `canvas_components/` and `config/sync/` together.
+
+Teammates pull the changes and run `ddev build-local`. On a brand-new
+machine, the three quick start commands are all they need.
+
+---
+
+## Technical reference
+
+### Requirements
+
+- DDEV 1.24+ with a Docker provider (Docker Desktop, OrbStack, Colima or
+  Rancher Desktop).
+- Node.js 22+ on the host machine itself, not only inside DDEV. The Canvas
+  CLI and Workbench run on the host. Install it from
   [nodejs.org](https://nodejs.org), or with `brew install node` or
   `nvm install 22`.
-- Port `5173` free on the host for Workbench.
+- Port `5173` free for Workbench.
 
-## What's in here
+### Stack
 
-- `composer.json` — Drupal 11 + `drupal/canvas`, `drupal/ai`, `drupal/ai_agents`,
-  `drupal/ai_provider_openai`, `drupal/pathauto`, `drupal/simple_oauth`.
-- `.ddev/config.yaml` — PHP 8.4, Node 24 with Corepack enabled (needed for
-  `npx`/`npm` inside the web container).
-- `.ddev/commands/web/site-install` — fresh install: composer install, OAuth
-  key generation, `drush site-install`, applies the recipe below, then
-  configures the Simple OAuth key paths and creates the `canvas` consumer
-  (Client Credentials, acting as user 1, allowed every `canvas:*` scope), so
-  `npx canvas push` works with no browser login and no manual UI steps. It's
-  safe to re-run, and it finishes with `drush config:export`. **That
-  consumer is for local development only.** Don't deploy it.
-- `.ddev/commands/web/build-local` — day-to-day rebuild after pulling changes.
-- `recipes/canvas_starter/` — a Drupal recipe that installs Canvas (plus its
-  `canvas_ai`, `canvas_dev_ai`, `canvas_dev_mode`, `canvas_oauth` submodules),
-  the AI modules, Pathauto, and Simple OAuth in one shot. It ships no config
-  of its own, but it does `config: import` each module's default config
-  (OAuth scopes, text formats, image styles, AI agent definitions): a recipe
-  otherwise installs only a module's *simple* config and silently skips its
-  config entities. It also makes `canvas_starter_theme` (below) the default
-  front-end theme (Claro stays the admin theme). Content-specific config
-  (content types, view modes, Pathauto patterns) is left for each project
-  to define.
-- `web/themes/custom/canvas_starter_theme/` — the site's own front-end
-  theme. It's deliberately bare, with no base theme and no CSS. Canvas
-  pages render inside the front-end theme, and a full theme like Olivero
-  squeezes the Tailwind components into its grid. Its regions (`header`,
-  `highlighted`, `content`, `footer`) and `page.html.twig` mirror
-  `canvas_components/src/layout.jsx`, so Drupal renders pages the way
-  Workbench previews them. When you add a region to one, add it to the
-  other. Rename the theme per project if you like, and update the recipe
-  to match.
-- `config/sync/` — exported site config (committed). `ddev site-install`
-  writes the initial export; `ddev build-local` imports it.
-- `.ddev/mutagen/mutagen.yml` — DDEV's default, plus `/canvas_components`
-  excluded from the sync. The container never uses it, and syncing it
-  copies 300+ MB of `node_modules` into the container.
-- `canvas-common.sh` — shared by the commands below: checks for Node 22+,
-  scaffolds `canvas_components/` and its `.env` on first run (seeding it
-  with the template's example components, pages and regions), and keeps
-  working `CANVAS_CLIENT_ID`/`CANVAS_CLIENT_SECRET` values in
-  `canvas_components/.env` (gitignored). The site stores only a hash of the
-  secret. So when there's no secret yet, or the site rejects it (for example
-  after a reinstall), the script sets a new one on the `canvas` consumer
-  through `ddev drush`.
-- `.ddev/commands/host/push-components` / `pull-components` — `ddev
-  push-components` pushes component/page/content-template/region changes to
-  the Drupal site; `ddev pull-components` pulls edits made in the Drupal UI
-  back into the codebase. Both run on the host, read the site URL straight
-  from DDEV's `$DDEV_PRIMARY_URL`, and don't prompt: they pass `--yes`.
-- `dev.sh` — runs Canvas Workbench for local component
-  preview/development. **Needs no Drupal site and no `ddev` running at
-  all** — it never touches `.env` or OAuth, so component work can start
-  before the backend even exists. It's a plain script rather than a `ddev`
-  command specifically to keep that independence obvious.
+- Drupal 11 on PHP 8.4, MariaDB 11.8 and nginx (see `.ddev/config.yaml`).
+- `drupal/canvas`, `drupal/ai`, `drupal/ai_agents`, `drupal/ai_provider_openai`,
+  `drupal/pathauto` and `drupal/simple_oauth`.
+- Code components scaffolded from Acquia's
+  [Nebula](https://github.com/acquia/nebula) template: React, Tailwind CSS,
+  the Canvas CLI and Canvas Workbench.
 
-`canvas_components/` itself is **not** part of this template — it's generated
-fresh per project by the official scaffolder (see below), so it always starts
-from the current version of that tooling.
+### Project layout
 
-## Kickstarting a new project
+| Path | Purpose |
+|---|---|
+| `recipes/canvas_starter/` | Drupal recipe that installs and configures everything. |
+| `web/themes/custom/canvas_starter_theme/` | Bare front-end theme that Canvas pages render in. |
+| `canvas_components/` | Components, pages and regions. Generated on first run and committed per project. |
+| `config/sync/` | Exported site config. |
+| `canvas-common.sh` | Shared logic behind `push-components`, `pull-components` and `dev.sh`. |
+| `.ddev/commands/` | The `ddev` commands listed above. |
+| `keys/` | OAuth signing keys, generated by `site-install` and gitignored. |
 
-1. Copy this directory to your new project folder and `cd` into it, then
-   `git init` (or clone this repo and re-point `origin`).
-2. `ddev start`
-3. `ddev site-install`
-   - Installs Composer dependencies, generates an RSA key pair into `keys/`,
-     runs `drush site-install standard`, applies `recipes/canvas_starter`,
-     configures the Simple OAuth key paths, creates a `canvas`
-     client-credentials consumer and exports config to `config/sync/`, with
-     no manual UI steps. Commit `config/sync/`.
-4. `ddev push-components` — scaffolds `canvas_components/` (React + Tailwind +
-   the Canvas CLI/Workbench, from Acquia's "Nebula" starter) with its `.env`
-   pre-filled on first run, copies the template's `examples/` components,
-   pages and regions into place, installs npm deps, provisions the CLI's
-   client secret, uploads the example pages' external images as Drupal
-   media, and pushes everything to the site. There's no browser login and
-   nothing to confirm.
-5. `./dev.sh` to run Canvas Workbench for local component development.
-   This scaffolds `canvas_components/` too if you haven't run `ddev
-   push-components` yet. **No Drupal site or `ddev` required** — if you just
-   want to build components, `./dev.sh` can be your entire step 1, skipping
-   steps 2–4 completely until you're ready to wire up the backend.
+### What `site-install` does
 
-## Day to day
+1. Runs `composer install` and generates an RSA key pair in `keys/`.
+2. Installs Drupal with the `standard` profile and applies
+   `recipes/canvas_starter`.
+3. Points Simple OAuth at the keys and creates the `canvas` OAuth consumer
+   (see [CLI authentication](#cli-authentication)).
+4. Exports config to `config/sync/`.
 
-- `ddev build-local` — rebuild after pulling code/config changes.
-- `./dev.sh` — local component preview/dev server. **Works with `ddev`
-  stopped and no Drupal site installed** — nothing else here does.
-- `ddev push-components` — push component changes to the Drupal site, then
-  export config to `config/sync/`, because pushed components are Drupal
-  config. Commit both. Images the site doesn't have yet (for example on a
-  teammate's fresh install) are re-uploaded from their original URLs
-  automatically.
-- `ddev pull-components` — pull page, content template, or region edits made
-  in the Drupal UI back into the codebase.
+It's safe to re-run, but it always replaces the database.
 
-## Troubleshooting
+### The recipe
 
-- **`Node.js 22+ is required on your machine`**: the Canvas tooling runs on
-  the host. See [Prerequisites](#prerequisites).
-- **`No 'canvas' consumer found`**: the site was installed without this
-  starter's `site-install`. Run `ddev site-install`.
-- **Push fails with 401/403 right after changing OAuth settings**: delete the
-  `CANVAS_CLIENT_SECRET` line from `canvas_components/.env` and re-run. A
-  new secret is provisioned automatically.
-- **`ddev build-local` says config/sync/ is empty**: run `ddev drush cex -y`
-  on a working site and commit `config/sync/`.
-- **npm warns that install scripts were blocked (esbuild, fsevents)**: this
-  is harmless with npm 12+. Workbench and builds use esbuild's prebuilt
-  platform binary.
+`recipes/canvas_starter` installs Canvas with its `canvas_ai`,
+`canvas_dev_ai`, `canvas_dev_mode` and `canvas_oauth` submodules, the AI
+modules, Pathauto, Simple OAuth, the core Image media type and the starter
+theme.
+
+It uses `config: import` to import each module's default config: OAuth
+scopes, text formats, image styles and AI agent definitions. A recipe
+otherwise installs only a module's simple config and silently skips its
+config entities, which breaks components with image props. Content-specific
+config, such as content types, view modes and Pathauto patterns, is left to
+each project.
+
+### The theme
+
+Canvas pages render inside the front-end theme. A full theme like Olivero
+squeezes the Tailwind components into its own grid, so the site uses
+`canvas_starter_theme` instead. It has no base theme and no CSS, and its
+regions (`header`, `highlighted`, `content`, `footer`) and `page.html.twig`
+mirror `canvas_components/src/layout.jsx`. That way Drupal renders pages the
+way Workbench previews them. When you add a region to one, add it to the
+other. Claro stays the admin theme.
+
+You can rename the theme per project. If you do, update the recipe to match.
+
+### CLI authentication
+
+`site-install` creates a confidential **Client Credentials** consumer named
+`canvas`. It acts as user 1 and may request every `canvas:*` scope. The
+first push or pull generates a secret, stores it on the consumer through
+`ddev drush`, and writes it to `canvas_components/.env`, which is
+gitignored. Drupal keeps only a hash of the secret, so whenever the stored
+secret is missing or rejected (a new machine, or after a reinstall), a new
+one is provisioned automatically. There's no browser login and no token
+cache.
+
+> **Local development only.** Don't deploy this consumer to a public
+> environment.
+
+### What `push-components` does
+
+1. Scaffolds `canvas_components/` from Nebula on first run and seeds it with
+   the template's example components, pages and regions.
+2. Checks the CLI credentials and provisions new ones if needed.
+3. Reverts any image references to media that doesn't exist on this site
+   back to their original URLs. This is what happens on a teammate's fresh
+   install.
+4. Runs `canvas reconcile-media` to upload external images as Drupal media,
+   then `canvas push`.
+5. Re-saves the Canvas page regions one at a time. The CLI pushes regions
+   in parallel, and concurrent saves can drop a region from Drupal's lookup
+   index, which leaves it missing from rendered pages.
+6. Exports config to `config/sync/`, because pushed components are Drupal
+   config. Without this step, `build-local` would try to delete them.
+
+`pull-components` does steps 1 and 2, then runs `canvas pull`. Both commands
+run on the host, read the site URL from `$DDEV_PRIMARY_URL`, and pass
+`--yes` so they never prompt.
+
+### `build-local`
+
+Runs `composer install` and `drush deploy` (database updates, config import
+and a cache rebuild), then prints a login link. If `config/sync/` is still
+empty, it skips the config import.
+
+### `dev.sh`
+
+Runs Canvas Workbench on `http://localhost:5173`. It scaffolds
+`canvas_components/` if needed, and it never touches DDEV, `.env` or OAuth.
+That's why it works before a Drupal site exists.
+
+### Mutagen
+
+On macOS, DDEV syncs the project into the container with Mutagen.
+`.ddev/mutagen/mutagen.yml` excludes `canvas_components/`, which the
+container never uses. Syncing it would copy 300+ MB of `node_modules` into
+the container.
+
+### Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| `Node.js 22+ is required on your machine` | Install Node 22+ on the host. See [Requirements](#requirements). |
+| `No 'canvas' consumer found` | The site wasn't installed by this starter. Run `ddev site-install`. |
+| Push fails with 401 or 403 after you changed OAuth settings | Delete the `CANVAS_CLIENT_SECRET` line from `canvas_components/.env` and push again. |
+| `/home` returns 403 | The page is still an unpublished draft. Publish it in the Canvas editor. |
+| Images look broken on the first page load | Drupal is still generating image styles. Reload the page. |
+| `ddev build-local` says `config/sync/` is empty | Run `ddev drush cex -y` on a working site and commit `config/sync/`. |
+| npm warns that install scripts were blocked (esbuild, fsevents) | Harmless with npm 12+. Workbench uses esbuild's prebuilt binary. |
