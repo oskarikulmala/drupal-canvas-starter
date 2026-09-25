@@ -23,11 +23,12 @@ echo "Configuring Simple OAuth keys and the Canvas consumer ..."
 drush config:set simple_oauth.settings public_key "$(pwd)/keys/public.key" -y
 drush config:set simple_oauth.settings private_key "$(pwd)/keys/private.key" -y
 
-# The canvas:media:{type}:create scopes (e.g. canvas:media:image:create,
-# requested by default in `canvas login`) are created by this helper, only
-# ever called from canvas_oauth's hook_install() -- which runs too early in
-# the same recipe batch to see the Image media type. Re-run it directly.
-drush php:eval "\Drupal::classResolver(\Drupal\canvas_oauth\MediaScopesHelper::class)->ensureMediaImageScopes();"
+# The canvas:media:{type}:create scopes (e.g. canvas:media:image:create, used
+# when pushing pages with images) are created by this helper, only ever called
+# from canvas_oauth's hook_install() -- which runs too early in the same recipe
+# batch to see the Image media type. Re-run it directly.
+# Canvas 1.11 renamed ensureMediaImageScopes() to ensureMediaScopes().
+drush php:eval "\$helper = \Drupal::classResolver(\Drupal\canvas_oauth\MediaScopesHelper::class); method_exists(\$helper, 'ensureMediaScopes') ? \$helper->ensureMediaScopes() : \$helper->ensureMediaImageScopes();"
 
 # A confidential client-credentials client for the Canvas CLI, so push/pull
 # need no browser login. It acts as user 1 and may request every canvas:*
