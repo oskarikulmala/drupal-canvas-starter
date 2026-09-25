@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 ## Description: Push Canvas component/page/content-template/region changes to this project's Drupal site
-## Usage: push-components
+## Usage: push-components [--yes]
 ## Example: "ddev push-components"
 
 set -e
@@ -10,4 +10,8 @@ cd "$DDEV_APPROOT"
 source ./canvas-common.sh
 
 ensure_canvas_env "$DDEV_PRIMARY_URL"
-canvas_run push
+# Pages/regions that reference external image URLs (the starter homepage
+# does) are rejected until those are uploaded as Drupal media. A no-op once
+# everything is reconciled.
+canvas_run reconcile-media "$@"
+canvas_run push "$@"

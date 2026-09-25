@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 ## Description: Pull page/content-template/region edits made in the Drupal UI back into canvas_components/
-## Usage: pull-components
+## Usage: pull-components [--yes]
 ## Example: "ddev pull-components"
 
 set -e
@@ -10,4 +10,4 @@ cd "$DDEV_APPROOT"
 source ./canvas-common.sh
 
 ensure_canvas_env "$DDEV_PRIMARY_URL"
-canvas_run pull
+canvas_run pull "$@"
