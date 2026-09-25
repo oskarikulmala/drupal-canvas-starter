@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 ## Description: Pull page/content-template/region edits made in the Drupal UI back into canvas_components/
-## Usage: pull-components [--yes]
+## Usage: pull-components
 ## Example: "ddev pull-components"
 
 set -e
