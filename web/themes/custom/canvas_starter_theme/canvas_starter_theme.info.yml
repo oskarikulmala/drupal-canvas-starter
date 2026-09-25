@@ -1,0 +1,10 @@
+name: 'Canvas starter theme'
+type: theme
+description: 'Bare front-end theme for Drupal Canvas code components. Adds no CSS of its own: styling comes from the components and the global CSS pushed from canvas_components/. Its page template mirrors canvas_components/src/layout.jsx, so Drupal renders pages the way Canvas Workbench previews them.'
+core_version_requirement: ^11
+base theme: false
+regions:
+  header: Header
+  highlighted: Highlighted
+  content: Content
+  footer: Footer

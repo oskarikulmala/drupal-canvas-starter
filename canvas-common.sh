@@ -56,11 +56,9 @@ ensure_canvas_components() {
       mkdir -p src/components pages regions
       [ -d examples/components ] && cp -R examples/components/. src/components/
       [ -d examples/pages ] && cp -R examples/pages/. pages/
-      [ -d examples/regions ] && cp -R examples/regions/. regions/
-      # Region files are named after theme regions. The example targets a
-      # "footer" region, but Olivero (the standard profile's theme) only has
-      # footer_top/footer_bottom.
-      [ -f regions/footer.json ] && mv regions/footer.json regions/footer_bottom.json
+      if [ -d examples/regions ]; then
+        cp -R examples/regions/. regions/
+      fi
     )
   fi
   (cd canvas_components && npm i)

@@ -17,6 +17,11 @@ install:
   - ai_provider_openai
   - pathauto
   - simple_oauth
+  # Canvas pages render inside the front-end theme. Olivero's grid, containers
+  # and typography squeeze Tailwind-styled code components into narrow
+  # columns, so the site uses this project's own bare theme instead (see
+  # web/themes/custom/canvas_starter_theme).
+  - canvas_starter_theme
 config:
   # Modules installed by a recipe only get their *simple* config (settings
   # objects) by default; config entities from their config/install/ -- image
@@ -36,3 +41,7 @@ config:
     pathauto: '*'
     simple_oauth: '*'
     consumers: '*'
+  actions:
+    system.theme:
+      simpleConfigUpdate:
+        default: canvas_starter_theme

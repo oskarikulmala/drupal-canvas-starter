@@ -35,8 +35,19 @@ running locally on [DDEV](https://ddev.com), with the Canvas CLI
   of its own, but it does `config: import` each module's default config
   (OAuth scopes, text formats, image styles, AI agent definitions): a recipe
   otherwise installs only a module's *simple* config and silently skips its
-  config entities. Content-specific config (content types, view modes,
-  Pathauto patterns) is left for each project to define.
+  config entities. It also makes `canvas_starter_theme` (below) the default
+  front-end theme (Claro stays the admin theme). Content-specific config
+  (content types, view modes, Pathauto patterns) is left for each project
+  to define.
+- `web/themes/custom/canvas_starter_theme/` — the site's own front-end
+  theme. It's deliberately bare, with no base theme and no CSS. Canvas
+  pages render inside the front-end theme, and a full theme like Olivero
+  squeezes the Tailwind components into its grid. Its regions (`header`,
+  `highlighted`, `content`, `footer`) and `page.html.twig` mirror
+  `canvas_components/src/layout.jsx`, so Drupal renders pages the way
+  Workbench previews them. When you add a region to one, add it to the
+  other. Rename the theme per project if you like, and update the recipe
+  to match.
 - `config/sync/` — exported site config (committed). `ddev site-install`
   writes the initial export; `ddev build-local` imports it.
 - `.ddev/mutagen/mutagen.yml` — DDEV's default, plus `/canvas_components`

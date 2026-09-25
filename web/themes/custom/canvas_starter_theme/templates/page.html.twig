@@ -1,0 +1,17 @@
+{#
+/**
+ * @file
+ * Page template matching canvas_components/src/layout.jsx:
+ *
+ *   <Region name="header" /> <main>{children}</main> <Region name="footer" />
+ *
+ * Keep the two in sync when adding regions, so Workbench previews match what
+ * Drupal renders. `highlighted` holds status messages.
+ */
+#}
+{{ page.header }}
+<main>
+  {{ page.highlighted }}
+  {{ page.content }}
+</main>
+{{ page.footer }}

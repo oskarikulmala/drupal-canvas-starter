@@ -17,6 +17,12 @@ canvas_restore_missing_media
 canvas_run reconcile-media "$@"
 canvas_run push "$@"
 
+# The CLI pushes global regions in parallel, and concurrent config saves race
+# on the page_region lookup index (theme => region IDs) that Canvas uses to
+# find a theme's regions, so one can silently go missing from the rendered
+# page (typically the header). Re-saving them one by one rebuilds the index.
+ddev drush php:eval "foreach (\Drupal::entityTypeManager()->getStorage('page_region')->loadMultiple() as \$region) { \$region->save(); }"
+
 # Pushed components, pages and regions become Drupal config. Export it so
 # config/sync/ matches; otherwise `ddev build-local` (drush deploy) would try
 # to delete every pushed component, which Canvas refuses.
