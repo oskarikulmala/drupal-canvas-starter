@@ -2,10 +2,10 @@
 # Shared by the "push-components"/"pull-components" DDEV host commands and
 # ./dev.sh. Not meant to be run directly.
 
-# The Canvas CLI and Workbench run on the host, not in the DDEV container:
-# `canvas login` has to open a browser and receive its OAuth callback on
-# localhost:4444. So Node has to be installed on the host itself. Vite (used
-# by Workbench) needs ^20.19 || >=22.12; 22 is the simplest floor to state.
+# The Canvas CLI and Workbench run on the host, not in the DDEV container
+# (./dev.sh works with no DDEV at all), so Node has to be installed on the
+# host itself. Vite (used by Workbench) needs ^20.19 || >=22.12; 22 is the
+# simplest floor to state.
 require_node() {
   if ! command -v node >/dev/null 2>&1 || ! command -v npx >/dev/null 2>&1; then
     echo "Node.js 22+ is required on your machine (not just inside DDEV)." >&2
@@ -66,18 +66,12 @@ ensure_canvas_components() {
   (cd canvas_components && npm i)
 }
 
-# Ensures canvas_components/.env has CANVAS_SITE_URL/CANVAS_CLIENT_ID, and
-# exports them into the current shell. $1 is the site URL to fill in when
-# there's no .env yet. Run from the project root; changes directory into
-# canvas_components/ as a side effect.
-#
-# The scaffolder's .env.example ships placeholder
-# CANVAS_CLIENT_ID=cli/CANVAS_CLIENT_SECRET=secret values (for its generic
-# client-credentials docs), which don't match the "canvas" consumer this
-# starter actually provisions (see .ddev/commands/web/site-install). So
-# CANVAS_CLIENT_ID is forced here rather than left alone if already set, and
-# the bogus secret is dropped — this starter's consumer is a public PKCE
-# client with no secret.
+# Ensures canvas_components/.env has CANVAS_SITE_URL and working
+# CANVAS_CLIENT_ID/CANVAS_CLIENT_SECRET for the "canvas" client-credentials
+# consumer (see .ddev/commands/web/site-install), and exports them into the
+# current shell. $1 is the site URL to fill in when there's no .env yet. Run
+# from the project root; changes directory into canvas_components/ as a side
+# effect.
 ensure_canvas_env() {
   local site_url="$1"
   ensure_canvas_components "$site_url"
@@ -87,81 +81,90 @@ ensure_canvas_env() {
   if [ ! -f .env ]; then
     echo "CANVAS_SITE_URL=$site_url" > .env
   fi
-  grep -v -E '^CANVAS_CLIENT_ID=|^CANVAS_CLIENT_SECRET=' .env > .env.tmp
-  mv .env.tmp .env
-  echo "CANVAS_CLIENT_ID=canvas" >> .env
-
   set -a
   source .env
   set +a
+
+  if ! canvas_credentials_work; then
+    canvas_provision_credentials
+  fi
 }
 
-# Prints the state of the cached CLI login for $CANVAS_SITE_URL:
-#   missing     - never logged in to this site on this machine
-#   valid       - access token accepted by the site
-#   refreshable - access token expired, but a refresh token is stored (the
-#                 CLI refreshes it by itself)
-#   dead        - expired with no refresh token, or rejected by the site
-#                 (e.g. after `ddev site-install` wiped the database)
-canvas_token_state() {
-  local token_file="$HOME/.config/drupal-canvas/oauth.json"
-  local state
-  state=$(TOKEN_FILE="$token_file" node -e '
-    const fs = require("fs");
-    let entry;
-    try { entry = JSON.parse(fs.readFileSync(process.env.TOKEN_FILE, "utf8"))[process.env.CANVAS_SITE_URL]; } catch {}
-    if (!entry || !entry.accessToken) { console.log("missing"); process.exit(); }
-    if (entry.expiresAt && entry.expiresAt < Date.now() + 30000) {
-      console.log(entry.refreshToken ? "refreshable" : "dead"); process.exit();
-    }
-    console.log("check " + entry.accessToken);
-  ')
-  if [ "${state%% *}" != "check" ]; then
-    echo "$state"
-    return
-  fi
+# True if the stored client ID/secret can get an access token from the site.
+canvas_credentials_work() {
+  [ "$CANVAS_CLIENT_ID" = "canvas" ] && [ -n "$CANVAS_CLIENT_SECRET" ] || return 1
   local code
-  code=$(curl -ks -o /dev/null -w '%{http_code}' \
-    -H "Authorization: Bearer ${state#check }" \
-    "$CANVAS_SITE_URL/canvas/api/v0/config/js_component")
-  if [ "$code" = "401" ] || [ "$code" = "403" ]; then
-    echo dead
-  else
-    echo valid
-  fi
+  code=$(curl -ks -o /dev/null -w '%{http_code}' -X POST "$CANVAS_SITE_URL/oauth/token" \
+    --data-urlencode grant_type=client_credentials \
+    --data-urlencode client_id="$CANVAS_CLIENT_ID" \
+    --data-urlencode client_secret="$CANVAS_CLIENT_SECRET" \
+    --data-urlencode scope=canvas:js_component)
+  [ "$code" = "200" ]
 }
 
-canvas_login() {
-  npx canvas logout --site-url "$CANVAS_SITE_URL" >/dev/null 2>&1 || true
-  npx canvas login --site-url "$CANVAS_SITE_URL" --client-id "$CANVAS_CLIENT_ID"
+# Gives the "canvas" consumer a fresh secret and stores it in .env. The site
+# only keeps a hash of the secret, so it can't be read back -- rotating it is
+# how a new machine, or a site that was just reinstalled, gets working
+# credentials without anyone opening a browser.
+canvas_provision_credentials() {
+  echo "Provisioning Canvas CLI credentials ..."
+  local secret
+  secret=$(openssl rand -hex 32)
+  ddev drush php:eval "
+    \$c = \Drupal::entityTypeManager()->getStorage('consumer')->loadByProperties(['client_id' => 'canvas']);
+    if (!\$c) { fwrite(STDERR, \"No 'canvas' consumer found. Run 'ddev site-install' first.\n\"); exit(1); }
+    \$c = reset(\$c);
+    \$c->set('secret', '$secret');
+    \$c->save();
+  "
+  grep -v -E '^CANVAS_CLIENT_ID=|^CANVAS_CLIENT_SECRET=' .env > .env.tmp || true
+  mv .env.tmp .env
+  printf 'CANVAS_CLIENT_ID=canvas\nCANVAS_CLIENT_SECRET=%s\n' "$secret" >> .env
+  export CANVAS_CLIENT_ID=canvas CANVAS_CLIENT_SECRET="$secret"
 }
 
-# Runs a Canvas CLI command against canvas_components/, logging in first if
-# there's no usable stored token for this site. Run this after
-# ensure_canvas_env, so CANVAS_SITE_URL/CANVAS_CLIENT_ID are set.
-#
-# `canvas login` caches tokens in ~/.config/drupal-canvas/oauth.json (keyed
-# by site URL) and `push`/`pull` reuse -- and silently refresh -- them, so
-# this only opens a browser once per machine per site (or after a reinstall),
-# not on every run. It's a proactive check rather than "try push, login on
-# failure": without a stored token, `canvas push`/`pull` itself blocks on an
-# interactive "Enter your client secret" prompt (irrelevant for our
-# PKCE-only, secret-less consumer) instead of just failing.
+# `canvas reconcile-media` rewrites external image URLs in pages/regions/
+# content templates into references to Drupal media IDs, keeping the
+# original URL in `_provenance`. Those IDs only exist in the database they
+# were uploaded to, so on a teammate's fresh install (or after
+# `ddev site-install`) the push fails with "NULL value found". Revert any
+# reference to a media ID this site doesn't have back to its source URL, so
+# the following reconcile-media uploads it again. Run from canvas_components/.
+canvas_restore_missing_media() {
+  local media_ids
+  media_ids=$(ddev drush sql:query "SELECT mid FROM media" | tr '\n' ' ')
+  MEDIA_IDS="$media_ids" node - <<'JS'
+const fs = require("fs");
+const path = require("path");
+const config = JSON.parse(fs.readFileSync("canvas.config.json", "utf8"));
+const existing = new Set(process.env.MEDIA_IDS.split(/\s+/).filter(Boolean).map(Number));
+const dirs = [config.pagesDir, config.regionsDir, config.contentTemplatesDir].filter(Boolean);
+for (const dir of dirs) {
+  if (!fs.existsSync(dir)) continue;
+  for (const name of fs.readdirSync(dir).filter((f) => f.endsWith(".json"))) {
+    const file = path.join(dir, name);
+    const data = JSON.parse(fs.readFileSync(file, "utf8"));
+    let changed = 0;
+    for (const element of Object.values(data.elements ?? {})) {
+      for (const [prop, source] of Object.entries(element._provenance ?? {})) {
+        if (!source?.source_url || existing.has(Number(source.target_id))) continue;
+        element.props[prop] = { src: source.source_url };
+        delete element._provenance[prop];
+        changed++;
+      }
+      if (element._provenance && !Object.keys(element._provenance).length) delete element._provenance;
+    }
+    if (changed) {
+      fs.writeFileSync(file, JSON.stringify(data, null, 2) + "\n");
+      console.log(`Re-queued ${changed} image(s) in ${file} for upload (media missing on this site).`);
+    }
+  }
+}
+JS
+}
+
+# Runs a Canvas CLI command against canvas_components/ without prompting.
+# Run this after ensure_canvas_env, so the credentials are exported.
 canvas_run() {
-  case "$(canvas_token_state)" in
-    missing|dead) canvas_login ;;
-  esac
-  if ! npx canvas "$@"; then
-    # A stored refresh token can still be dead (site reinstalled since): a
-    # successful refresh would have bumped expiresAt, so a token still
-    # "refreshable" here means the refresh itself was rejected. Log in again
-    # and retry once in that case only; real push/pull errors fall through.
-    case "$(canvas_token_state)" in
-      missing|dead|refreshable)
-        canvas_login
-        npx canvas "$@"
-        ;;
-      *) return 1 ;;
-    esac
-  fi
+  npx canvas "$@" --yes
 }

@@ -29,19 +29,28 @@ drush config:set simple_oauth.settings private_key "$(pwd)/keys/private.key" -y
 # the same recipe batch to see the Image media type. Re-run it directly.
 drush php:eval "\Drupal::classResolver(\Drupal\canvas_oauth\MediaScopesHelper::class)->ensureMediaImageScopes();"
 
-# A public PKCE client for the Canvas CLI. The refresh_token grant matters:
-# without it Drupal issues no refresh token, so the CLI's cached login dies
-# with the 5-minute access token and every later push/pull stops at an
-# "Enter your client secret" prompt.
+# A confidential client-credentials client for the Canvas CLI, so push/pull
+# need no browser login. It acts as user 1 and may request every canvas:*
+# scope. LOCAL DEVELOPMENT ONLY. The secret is set to a throwaway value here;
+# the push-components/pull-components host commands rotate it to one they
+# keep in canvas_components/.env (see canvas-common.sh).
 drush php:eval "$(cat <<'PHP'
-$storage = \Drupal::entityTypeManager()->getStorage('consumer');
+$etm = \Drupal::entityTypeManager();
+$scopes = array_values(array_filter(
+  array_keys($etm->getStorage('oauth2_scope')->loadMultiple()),
+  fn ($id) => str_starts_with($id, 'canvas_'),
+));
+$storage = $etm->getStorage('consumer');
 $existing = $storage->loadByProperties(['client_id' => 'canvas']);
 $consumer = $existing ? reset($existing) : $storage->create(['client_id' => 'canvas']);
-$consumer->set('label', 'Canvas');
-$consumer->set('grant_types', ['authorization_code', 'refresh_token']);
-$consumer->set('pkce', TRUE);
-$consumer->set('confidential', FALSE);
-$consumer->set('redirect', ['http://localhost:4444/callback']);
+$consumer->set('label', 'Canvas CLI (local)');
+$consumer->set('grant_types', ['client_credentials']);
+$consumer->set('confidential', TRUE);
+$consumer->set('pkce', FALSE);
+$consumer->set('secret', bin2hex(random_bytes(32)));
+$consumer->set('user_id', 1);
+$consumer->set('scopes', $scopes);
+$consumer->set('redirect', []);
 $consumer->set('status', TRUE);
 $consumer->save();
 PHP
