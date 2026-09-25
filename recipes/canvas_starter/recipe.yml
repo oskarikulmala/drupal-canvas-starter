@@ -17,6 +17,11 @@ install:
   - ai_provider_openai
   - pathauto
   - simple_oauth
+  # Canvas pages render inside the front-end theme. Olivero's grid, containers
+  # and typography squeeze Tailwind-styled code components into narrow
+  # columns; Stark adds next to no CSS and has the plain `header`/`footer`
+  # regions the Nebula template's layout.jsx and example regions target.
+  - stark
 config:
   # Modules installed by a recipe only get their *simple* config (settings
   # objects) by default; config entities from their config/install/ -- image
@@ -36,3 +41,7 @@ config:
     pathauto: '*'
     simple_oauth: '*'
     consumers: '*'
+  actions:
+    system.theme:
+      simpleConfigUpdate:
+        default: stark

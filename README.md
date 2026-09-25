@@ -35,8 +35,13 @@ running locally on [DDEV](https://ddev.com), with the Canvas CLI
   of its own, but it does `config: import` each module's default config
   (OAuth scopes, text formats, image styles, AI agent definitions): a recipe
   otherwise installs only a module's *simple* config and silently skips its
-  config entities. Content-specific config (content types, view modes,
-  Pathauto patterns) is left for each project to define.
+  config entities. It also makes core's **Stark** the default front-end
+  theme (Claro stays the admin theme). Canvas pages render inside the
+  front-end theme, and Olivero's grid and typography squeeze the Tailwind
+  components into narrow columns. Stark adds almost no CSS and has the
+  plain `header`/`footer` regions that the Nebula layout targets.
+  Content-specific config (content types, view modes, Pathauto patterns) is
+  left for each project to define.
 - `config/sync/` — exported site config (committed). `ddev site-install`
   writes the initial export; `ddev build-local` imports it.
 - `.ddev/mutagen/mutagen.yml` — DDEV's default, plus `/canvas_components`
