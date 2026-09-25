@@ -7,5 +7,19 @@
 set -e
 
 composer install
-drush deploy -y
+
+if ! drush status --field=bootstrap 2>/dev/null | grep -q Successful; then
+  echo "No installed site found. Run 'ddev site-install' first." >&2
+  exit 1
+fi
+
+# drush deploy imports config/sync/ and refuses an empty one, so fall back to
+# just running updates until the first `drush config:export` is committed.
+if [ -f config/sync/core.extension.yml ]; then
+  drush deploy -y
+else
+  echo "config/sync/ is empty; skipping config import (run 'ddev drush cex' and commit it)."
+  drush updatedb -y
+  drush cache:rebuild
+fi
 drush uli

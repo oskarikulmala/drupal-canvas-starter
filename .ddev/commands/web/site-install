@@ -12,6 +12,7 @@ if [ ! -f keys/private.key ]; then
   echo "Generating OAuth key pair in keys/ ..."
   openssl genrsa -out keys/private.key 2048
   openssl rsa -in keys/private.key -pubout > keys/public.key
+  chmod 600 keys/private.key
 fi
 
 drush site-install standard -y
@@ -22,33 +23,36 @@ echo "Configuring Simple OAuth keys and the Canvas consumer ..."
 drush config:set simple_oauth.settings public_key "$(pwd)/keys/public.key" -y
 drush config:set simple_oauth.settings private_key "$(pwd)/keys/private.key" -y
 
-# canvas_oauth ships its OAuth2 scopes (canvas:js_component, canvas:page:*,
-# etc.) as default config, but installing it as part of a recipe batch (with
-# simple_oauth itself in the same batch) silently skips importing it, so
-# `canvas login`'s scope request gets rejected as "invalid, unknown, or
-# malformed" with zero scopes ever created. Re-running its default config
-# import here, once everything else has settled, reliably creates them.
-drush php:eval "\Drupal::service('config.installer')->installDefaultConfig('module', 'canvas_oauth');"
 # The canvas:media:{type}:create scopes (e.g. canvas:media:image:create,
 # requested by default in `canvas login`) are created by this helper, only
 # ever called from canvas_oauth's hook_install() -- which runs too early in
 # the same recipe batch to see the Image media type. Re-run it directly.
 drush php:eval "\Drupal::classResolver(\Drupal\canvas_oauth\MediaScopesHelper::class)->ensureMediaImageScopes();"
+
+# A public PKCE client for the Canvas CLI. The refresh_token grant matters:
+# without it Drupal issues no refresh token, so the CLI's cached login dies
+# with the 5-minute access token and every later push/pull stops at an
+# "Enter your client secret" prompt.
 drush php:eval "$(cat <<'PHP'
-$consumer = \Drupal\consumers\Entity\Consumer::create([
-  'label' => 'Canvas',
-  'client_id' => 'canvas',
-  'grant_types' => ['authorization_code'],
-  'pkce' => TRUE,
-  'confidential' => FALSE,
-  'redirect' => ['http://localhost:4444/callback'],
-  'status' => TRUE,
-]);
+$storage = \Drupal::entityTypeManager()->getStorage('consumer');
+$existing = $storage->loadByProperties(['client_id' => 'canvas']);
+$consumer = $existing ? reset($existing) : $storage->create(['client_id' => 'canvas']);
+$consumer->set('label', 'Canvas');
+$consumer->set('grant_types', ['authorization_code', 'refresh_token']);
+$consumer->set('pkce', TRUE);
+$consumer->set('confidential', FALSE);
+$consumer->set('redirect', ['http://localhost:4444/callback']);
+$consumer->set('status', TRUE);
 $consumer->save();
 PHP
 )"
 
+# Export the result so config/sync/ is a valid baseline for `ddev build-local`
+# (drush deploy refuses to import an empty sync directory).
+drush config:export -y
+
 echo ""
-echo "Site installed. The Canvas consumer (client ID: canvas) is ready for 'npx canvas push'."
+echo "Site installed. The Canvas consumer (client ID: canvas) is ready for 'ddev push-components'."
+echo "Commit config/sync/ so teammates can use 'ddev build-local'."
 echo ""
 drush uli

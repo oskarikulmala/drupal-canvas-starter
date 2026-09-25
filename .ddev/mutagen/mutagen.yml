@@ -1,0 +1,35 @@
+# Customised for this project (DDEV no longer regenerates it). Checked in.
+# Please do `ddev mutagen reset` after changing the file.
+# See DDEV Mutagen docs at
+# https://docs.ddev.com/en/stable/users/install/performance/#mutagen
+# For detailed information about mutagen configuration options, see
+# https://mutagen.io/documentation/introduction/configuration
+sync:
+  defaults:
+    mode: "two-way-resolved"
+    stageMode: "neighboring"
+    ignore:
+      paths:
+        # The top-level .git directory is ignored because where possible it's
+        # mounted into the container with a traditional docker bind-mount
+        - "/.git"
+        - "/.tarballs"
+        - "/.ddev/db_snapshots"
+        - "/.ddev/.importdb*"
+        - ".DS_Store"
+        - ".idea"
+        - "/web/sites/default/files"
+        # Canvas CLI/Workbench run on the host only; the container never needs
+        # this. Syncing it copies 300+ MB of node_modules into the container,
+        # and syncs the scaffolder's .git back after canvas-common.sh deletes it.
+        - "/canvas_components"
+
+        # You can also exclude other directories from mutagen-syncing
+        # For example /var/www/html/var does not need to sync in TYPO3
+        # so you can add:
+        # - "/var"
+        # vcs like .git can be ignored for safety, but then some
+        # composer operations may fail if they use dev versions/git.
+        # vcs: true
+    symlink:
+      mode: "posix-raw"

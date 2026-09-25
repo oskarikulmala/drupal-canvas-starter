@@ -17,3 +17,22 @@ install:
   - ai_provider_openai
   - pathauto
   - simple_oauth
+config:
+  # Modules installed by a recipe only get their *simple* config (settings
+  # objects) by default; config entities from their config/install/ -- image
+  # styles, text formats, AI agents, OAuth scopes and token bundles -- are
+  # skipped unless imported explicitly here. Without this, pushing any
+  # component with an image prop fails on the missing
+  # `canvas_parametrized_width` image style.
+  import:
+    canvas: '*'
+    canvas_ai: '*'
+    canvas_dev_ai: '*'
+    canvas_dev_mode: '*'
+    canvas_oauth: '*'
+    ai: '*'
+    ai_agents: '*'
+    ai_provider_openai: '*'
+    pathauto: '*'
+    simple_oauth: '*'
+    consumers: '*'
