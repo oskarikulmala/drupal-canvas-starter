@@ -262,6 +262,14 @@ $databases = [];
 # (drush deploy) can import it after a pull.
 $settings['config_sync_directory'] = '../config/sync';
 
+// The OAuth stack only exists so the local Canvas CLI (ddev push-components /
+// pull-components) can talk to this site, and simple_oauth.settings holds
+// machine-specific key paths. Keep these modules and all their config (the
+// canvas:* scopes, token bundles, key settings) out of config/sync/: drush
+// config:export skips them and config:import neither deletes nor enables
+// them, so they stay local and never deploy. site-install sets them up.
+$settings['config_exclude_modules'] = ['canvas_oauth', 'simple_oauth', 'consumers'];
+
 /**
  * Settings:
  *

@@ -9,6 +9,13 @@
 /web/sites/*/files/
 /web/sites/default/default.*
 
+# Local-only OAuth config for the Canvas CLI. Excluded from config export via
+# $settings['config_exclude_modules'] in settings.php; ignored here too so a
+# stray export can't commit it.
+/config/sync/simple_oauth.*
+/config/sync/consumers.*
+/config/sync/canvas_oauth.*
+
 # Local secrets.
 /keys/*.key
 canvas_components/.env
