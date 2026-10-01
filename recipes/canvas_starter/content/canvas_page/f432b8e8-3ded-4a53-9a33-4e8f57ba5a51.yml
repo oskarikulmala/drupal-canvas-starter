@@ -1,0 +1,22 @@
+_meta:
+  version: '1.0'
+  entity_type: canvas_page
+  uuid: f432b8e8-3ded-4a53-9a33-4e8f57ba5a51
+  default_langcode: en
+default:
+  title:
+    -
+      value: Home
+  description:
+    -
+      value: 'Starter home page. Replace it in the Canvas editor.'
+  status:
+    -
+      value: true
+  owner:
+    -
+      target_id: 1
+  path:
+    -
+      alias: /home
+  components: []

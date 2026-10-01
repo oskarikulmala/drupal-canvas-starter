@@ -45,3 +45,9 @@ config:
     system.theme:
       simpleConfigUpdate:
         default: canvas_starter_theme
+    # Land on the starter page in content/canvas_page/ (alias /home) instead of
+    # the /node listing.
+    system.site:
+      simpleConfigUpdate:
+        page:
+          front: /home
