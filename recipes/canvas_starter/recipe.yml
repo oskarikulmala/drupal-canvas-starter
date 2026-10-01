@@ -45,8 +45,9 @@ config:
     system.theme:
       simpleConfigUpdate:
         default: canvas_starter_theme
-    # Land on the starter page in content/canvas_page/ (alias /home) instead of
-    # the /node listing.
+    # Land on /home instead of the /node listing. The recipe doesn't create the
+    # page: build it in the Canvas editor, give it the alias /home and publish
+    # it (until then / returns 404).
     system.site:
       simpleConfigUpdate:
         page:
